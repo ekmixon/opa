@@ -18,9 +18,9 @@ def run(cmd, *args, **kwargs):
 
 def get_commit_ids(from_commit, to_commit):
     cmd = "git log --format=%H --no-merges {from_commit}..{to_commit}"
-    commit_ids = run(cmd.format(from_commit=from_commit,
-                                to_commit=to_commit)).splitlines()
-    return commit_ids
+    return run(
+        cmd.format(from_commit=from_commit, to_commit=to_commit)
+    ).splitlines()
 
 
 def get_commit_message(commit_id):
@@ -49,8 +49,7 @@ def fetch(url, token):
 def get_maintainers():
     with open("MAINTAINERS.md", "r") as f:
         contents = f.read()
-    maintainers = re.findall(r"[^\s]+@[^\s]+", contents)
-    return maintainers
+    return re.findall(r"[^\s]+@[^\s]+", contents)
 
 maintainers = get_maintainers()
 
@@ -75,9 +74,8 @@ def get_org_members(token):
             github_ids[email]=login
 
 def author_email(commit_message):
-    match = re.search(r"<(.*@.*)>", commit_message)
-    if match:
-        author = match.group(1)
+    if match := re.search(r"<(.*@.*)>", commit_message):
+        author = match[1]
         return str(author)
     return ""
 
@@ -86,13 +84,12 @@ def get_github_id(commit_message, commit_id, token):
     email = author_email(commit_message)
     if github_ids.get(email, ""):
         return github_ids[email]
-    url = "https://api.github.com/repos/open-policy-agent/opa/commits/{}".format(commit_id)
+    url = f"https://api.github.com/repos/open-policy-agent/opa/commits/{commit_id}"
     r = fetch(url, token)
     author = r.get('author', {})
     if author is None:
         return ""
-    login = author.get('login', '')
-    if login:
+    if login := author.get('login', ''):
         github_ids[email]=login
         return login
     return ""
@@ -113,9 +110,8 @@ def get_issue_reporter(issue_id, token):
     return ""
 
 def fixes_issue_id(commit_message):
-    match = re.search(r"Fixes:?\s*#(\d+)", commit_message)
-    if match:
-        return match.group(1)
+    if match := re.search(r"Fixes:?\s*#(\d+)", commit_message):
+        return match[1]
 
 
 def get_subject(commit_message):
@@ -125,9 +121,9 @@ def get_changelog_message(commit_message, issue_id, mention, reporter, repo_url)
     if issue_id:
         subject = get_subject(commit_message)
         if mention:
-            mention = " "+mention
+            mention = f" {mention}"
         if reporter:
-            reporter = " "+reporter
+            reporter = f" {reporter}"
         return "Fixes", "{subject} ([#{issue_id}]({repo_url}/issues/{issue_id})){mention}{reporter}".format(subject=subject, issue_id=issue_id, repo_url=repo_url, mention=mention, reporter=reporter)
     return None, get_subject(commit_message)
 
@@ -172,14 +168,14 @@ def main():
         print("### Fixes")
         print("")
         for line in sorted(changelog["Fixes"]):
-            print("- {}".format(line))
+            print(f"- {line}")
         print("")
 
     if None in changelog:
         print("### Miscellaneous")
         print("")
         for line in sorted(changelog[None]):
-            print("- {}".format(line))
+            print(f"- {line}")
 
 
 if __name__ == "__main__":
